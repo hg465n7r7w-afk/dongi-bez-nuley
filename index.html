@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  «ДОНГИ БЕЗ НУЛЕЙ» — мини-приложение для жизни во Вьетнаме               ║
+  ╠══════════════════════════════════════════════════════════════════════════╣
+  ║  Все файлы должны лежать В ОДНОЙ ПАПКЕ:                                  ║
+  ║                                                                          ║
+  ║  index.html          — СТРУКТУРА (этот файл): что где расположено        ║
+  ║  style.css           — ВНЕШНИЙ ВИД: цвета, шрифты, раскладка             ║
+  ║  app.js              — ПОВЕДЕНИЕ: курсы, расчёты, вкладки, настройки     ║
+  ║  sw.js               — «СЕРВИС-ВОРКЕР»: даёт работать без интернета      ║
+  ║  manifest.webmanifest— «паспорт» приложения: имя, цвета, значки          ║
+  ║  icon-192.png, icon-512.png, apple-touch-icon.png — значки приложения    ║
+  ║                                                                          ║
+  ║  Как поставить на телефон как обычное приложение (после публикации):     ║
+  ║  iPhone: Safari → «Поделиться» → «На экран Домой»                        ║
+  ║  Android: Chrome → меню ⋮ → «Установить приложение»                      ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
+-->
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <!-- viewport-fit=cover: приложение занимает весь экран, включая область под «чёлкой» -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Донги без нулей — конвертер, сдача, счёт, траты</title>
+  <meta name="description" content="Мини-приложение для жизни во Вьетнаме: перевод донгов в рубли, доллары, евро, тенге и сумы, проверка сдачи, делёж счёта и учёт ежедневных трат.">
+  <meta name="theme-color" content="#0a4d39">
+
+  <!-- Приложение на главном экране: «паспорт» и значки -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Донги">
+
+  <!-- Шрифт Onest с Google Fonts: хорошо читается на кириллице и имеет удобные цифры.
+       Без интернета браузер возьмёт обычный шрифт из запасного списка. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- ─────────── ШАПКА: название, курс и режим ввода ─────────── -->
+    <header class="app-header">
+      <div class="title-row">
+        <h1>Донги <span>без нулей</span></h1>
+        <button type="button" class="pill-btn" id="open-settings">Настройки</button>
+      </div>
+
+      <!-- Строка с текущим курсом. Текст подставляет app.js. aria-live — озвучивается при изменении. -->
+      <p class="rate-line" id="rate-line" aria-live="polite">Загружаю курс…</p>
+
+      <!-- Режим ввода. «В тысячах»: если набрать 150, приложение поймёт это как 150 000 ₫.
+           Удобно, ведь во Вьетнаме цены часто пишут как «150k». -->
+      <div class="mode-row">
+        <span class="mode-label" id="mode-label">Ввод донгов:</span>
+        <div class="seg" role="group" aria-labelledby="mode-label">
+          <button type="button" id="mode-plain" aria-pressed="true">Как есть</button>
+          <button type="button" id="mode-k" aria-pressed="false">В тысячах</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- ═══════════════ ВКЛАДКА 1: КОНВЕРТЕР ═══════════════ -->
+      <section class="panel" id="panel-convert" role="tabpanel" aria-labelledby="tab-convert">
+
+        <!-- Направление перевода. Кода валюты внутри кнопок (data-main-code) подставляет JavaScript. -->
+        <div class="seg seg-wide" role="group" aria-label="Направление перевода">
+          <button type="button" id="dir-from" aria-pressed="true">₫ → <span data-main-code>RUB</span></button>
+          <button type="button" id="dir-to" aria-pressed="false"><span data-main-code>RUB</span> → ₫</button>
+        </div>
+
+        <label class="big-field" for="conv-input">
+          <span id="conv-label">Сумма в донгах</span>
+        </label>
+        <!-- type="text" вместо number: так можно набрать «150k» или «1,5tr».
+             inputmode="text" вызывает обычную клавиатуру с буквами. -->
+        <input id="conv-input" class="big-input" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="150k, 1,5m или 150000">
+        <p class="parsed" id="conv-parsed" aria-live="polite"></p>
+
+        <!-- Кнопки быстрых сумм. Их создаёт app.js. -->
+        <div class="quick" id="conv-quick"></div>
+
+        <div class="result" id="conv-result" aria-live="polite">
+          <p class="result-label" id="result-label">Это примерно</p>
+          <p class="result-main" id="result-main">—</p>
+          <ul class="result-others" id="result-others"></ul>
+          <p class="result-rate" id="result-rate"></p>
+        </div>
+
+        <!-- Шпаргалка по купюрам: сколько каждая стоит в вашей валюте -->
+        <div class="notes">
+          <h2>Шпаргалка: купюры</h2>
+          <ul class="note-grid" id="note-grid"></ul>
+          <p class="note-tip"><strong>Осторожно:</strong> 20 000 и 500 000 ₫ обе синеватые, легко перепутать. Проверяйте количество нулей. Цвета на плитках приблизительные.</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════ ВКЛАДКА 2: СДАЧА ═══════════════ -->
+      <section class="panel" id="panel-change" role="tabpanel" aria-labelledby="tab-change" hidden>
+        <label class="big-field" for="ch-price"><span>Цена (сколько просят)</span></label>
+        <input id="ch-price" class="big-input" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Например: 85k">
+        <p class="parsed" id="ch-price-note" aria-live="polite"></p>
+
+        <label class="big-field" for="ch-given"><span>Вы дали</span></label>
+        <input id="ch-given" class="big-input" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Например: 100k">
+        <p class="parsed" id="ch-given-note" aria-live="polite"></p>
+        <div class="quick" id="ch-quick"></div>
+
+        <div class="result" id="ch-result" aria-live="polite">
+          <p class="result-label" id="ch-label">Сдача</p>
+          <p class="result-main" id="ch-main">—</p>
+          <p class="result-sub" id="ch-sub"></p>
+          <ul class="chips-out" id="ch-notes"></ul>
+        </div>
+      </section>
+
+      <!-- ═══════════════ ВКЛАДКА 3: ДЕЛЁЖ СЧЁТА ═══════════════
+           Два способа посчитать, реализованы как два скрытых/видимых блока (#bill-equal и #bill-items).
+           Переключает их пара кнопок ниже; JavaScript показывает нужный блок и прячет второй. -->
+      <section class="panel" id="panel-bill" role="tabpanel" aria-labelledby="tab-bill" hidden>
+
+        <!-- Способ расчёта -->
+        <div class="seg seg-wide" role="group" aria-label="Способ расчёта">
+          <button type="button" id="billmode-equal" aria-pressed="true">Поровну</button>
+          <button type="button" id="billmode-items" aria-pressed="false">По позициям</button>
+        </div>
+
+        <!-- ───── СПОСОБ 1: «Поровну» — одна общая сумма делится на всех одинаково ───── -->
+        <div id="bill-equal">
+          <label class="big-field" for="bill-total"><span>Сумма счёта</span></label>
+          <input id="bill-total" class="big-input" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Например: 1,2m">
+          <p class="parsed" id="bill-note" aria-live="polite"></p>
+
+          <div class="field-block">
+            <span class="field-label" id="people-label">Сколько человек</span>
+            <div class="stepper" role="group" aria-labelledby="people-label">
+              <button type="button" class="step-btn" id="people-minus" aria-label="Меньше человек">−</button>
+              <output class="step-value" id="people-value">2</output>
+              <button type="button" class="step-btn" id="people-plus" aria-label="Больше человек">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ───── СПОСОБ 2: «По позициям» — у каждого человека свой список заказанного ─────
+             Карточки людей и строки позиций создаёт JavaScript (функции createPersonCard
+             и createItemRow в app.js). У каждой карточки: имя (необязательно), список
+             «название + цена» и кнопка «+ Добавить позицию». Итог по человеку — под списком. -->
+        <div id="bill-items" hidden>
+          <p class="help">Впишите, кто что заказал: у каждого человека свой список позиций. Приложение само посчитает, сколько с кого причитается.</p>
+          <div id="persons-list"></div>
+          <button type="button" class="btn btn-outline" id="add-person">+ Добавить человека</button>
+        </div>
+
+        <!-- Чаевые и округление — общие настройки для обоих способов -->
+        <div class="field-block">
+          <span class="field-label" id="tip-label">Чаевые, %</span>
+          <div class="quick" id="tip-chips" role="group" aria-labelledby="tip-label"></div>
+        </div>
+
+        <label class="check">
+          <input type="checkbox" id="bill-round" checked>
+          Округлить сумму на человека вверх до 1 000 ₫
+        </label>
+
+        <!-- Заголовок результата меняется в зависимости от способа: «С каждого» или «Итого собрать» -->
+        <div class="result" id="bill-result" aria-live="polite">
+          <p class="result-label" id="bill-result-label">С каждого</p>
+          <p class="result-main" id="bill-main">—</p>
+          <ul class="result-others" id="bill-lines"></ul>
+        </div>
+      </section>
+
+      <!-- ═══════════════ ВКЛАДКА 4: ЕЖЕДНЕВНЫЕ ТРАТЫ ═══════════════
+           Каждая запись хранит сумму в донгах И курс на момент записи — так позже видно,
+           сколько это было «в тот день», даже если курс с тех пор изменился.
+           Итог за период всегда точен (это просто сумма донгов), а перевод в вашу валюту
+           внизу считается по СЕГОДНЯШНЕМУ курсу — отсюда пометка «по сегодняшнему курсу».
+           Все записи хранятся в памяти браузера (localStorage) на этом устройстве. -->
+      <section class="panel" id="panel-expenses" role="tabpanel" aria-labelledby="tab-expenses" hidden>
+
+        <!-- ───── БЮДЖЕТ ПОЕЗДКИ: короткая карточка на вкладке ─────
+             Сама форма ввода живёт в отдельном окне (см. <dialog id="budget-dialog"> ниже),
+             как и настройки. Здесь — только сводка и кнопка «Открыть/Изменить». -->
+        <div class="field-block" id="budget-block">
+          <div class="budget-summary-row">
+            <div>
+              <span class="field-label">Бюджет поездки</span>
+              <p class="result-sub" id="budget-summary-line">Не настроен</p>
+            </div>
+            <button type="button" class="btn btn-outline" id="open-budget">Открыть</button>
+          </div>
+        </div>
+
+        <div class="add-expense">
+          <label class="small-label" for="exp-date">Дата</label>
+          <input id="exp-date" class="text-input" type="date">
+
+          <label class="small-label" for="exp-amount">Сколько потратили</label>
+          <input id="exp-amount" class="big-input" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Например: 500k">
+          <p class="parsed" id="exp-amount-note" aria-live="polite"></p>
+
+          <button type="button" class="btn btn-block" id="exp-add">Добавить запись</button>
+        </div>
+
+        <div class="field-block">
+          <span class="field-label" id="exp-period-label">Период</span>
+          <div class="quick" id="exp-period-chips" role="group" aria-labelledby="exp-period-label"></div>
+          <!-- Поля «свой период» показываются, только если выбрана соответствующая «таблетка» -->
+          <div class="custom-range" id="exp-custom-range" hidden>
+            <label class="small-label" for="exp-from">С даты</label>
+            <input id="exp-from" class="text-input" type="date">
+            <label class="small-label" for="exp-to">По дату</label>
+            <input id="exp-to" class="text-input" type="date">
+          </div>
+        </div>
+
+        <div class="result" id="exp-summary" aria-live="polite">
+          <p class="result-label" id="exp-summary-label">Итого за период</p>
+          <p class="result-main" id="exp-summary-main">—</p>
+          <p class="result-sub" id="exp-summary-sub"></p>
+        </div>
+
+        <ul class="expense-list" id="exp-list"></ul>
+        <p class="empty-note" id="exp-empty" hidden>Записей за этот период пока нет.</p>
+      </section>
+    </main>
+
+    <!-- ─────────── НИЖНЯЯ ПАНЕЛЬ ВКЛАДОК ───────────
+         Три кнопки-вкладки, всегда внизу экрана (так удобно нажимать большим пальцем). -->
+    <nav class="tabbar" role="tablist" aria-label="Разделы приложения">
+      <button type="button" role="tab" id="tab-convert" aria-selected="true" aria-controls="panel-convert" data-tab="convert">Конвертер</button>
+      <button type="button" role="tab" id="tab-change" aria-selected="false" aria-controls="panel-change" data-tab="change">Сдача</button>
+      <button type="button" role="tab" id="tab-bill" aria-selected="false" aria-controls="panel-bill" data-tab="bill">Счёт</button>
+      <button type="button" role="tab" id="tab-expenses" aria-selected="false" aria-controls="panel-expenses" data-tab="expenses">Траты</button>
+    </nav>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       ОКНО НАСТРОЕК (<dialog> — встроенное в HTML всплывающее окно).
+       Здесь выбирают свою валюту и, при желании, вписывают свой курс обмена.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <dialog id="settings" aria-labelledby="settings-title">
+    <div class="dialog-body">
+      <div class="dialog-head">
+        <h2 id="settings-title">Настройки</h2>
+        <button type="button" class="close-btn" id="settings-close" aria-label="Закрыть окно">×</button>
+      </div>
+
+      <h3>Ваша валюта</h3>
+      <!-- Выпадающий список вместо кнопок: валют пять, так удобнее и компактнее.
+           Список пунктов строит JavaScript по данным из CURRENCIES в app.js. -->
+      <select id="currency-select" class="text-input" aria-label="Ваша валюта"></select>
+
+      <h3>Ваш курс обмена</h3>
+      <p class="help">Обменники и банки дают курс хуже рыночного. Впишите тот, по которому вы реально меняете деньги, и все расчёты пойдут по нему. Если оставить поле пустым, используется рыночный курс.</p>
+      <label class="small-label" for="manual-rate" id="manual-label">Донгов за 1 ₽</label>
+      <input id="manual-rate" class="text-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Рыночный курс">
+      <button type="button" class="btn btn-outline" id="manual-reset">Сбросить на рыночный</button>
+
+      <!-- Сравнение курса обменника с рыночным: показывает, сколько донгов выйдет по каждому
+           курсу за одну и ту же сумму, и разницу. Использует курс обменника из поля выше —
+           отдельного поля для него не заводим, чтобы не дублировать ввод. Никаких выводов
+           «выгодно / невыгодно» не делаем, только цифры — решение за пользователем. -->
+      <h3>Сравнение с рыночным курсом</h3>
+      <p class="help">Впишите сумму обмена — увидите, сколько донгов выйдет по рыночному курсу и по курсу обменника выше.</p>
+      <label class="small-label" for="compare-amount" id="compare-amount-label">Сумма обмена</label>
+      <input id="compare-amount" class="text-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Например: 100">
+      <div class="result" id="compare-result" aria-live="polite">
+        <p class="result-sub" id="compare-market">—</p>
+        <p class="result-sub" id="compare-exchange"></p>
+        <p class="result-sub" id="compare-diff"></p>
+      </div>
+
+      <h3>Обновление курса</h3>
+      <p class="help" id="rates-status"></p>
+      <button type="button" class="btn btn-outline" id="rates-refresh">Обновить курс</button>
+
+      <p class="attrib">Рыночные курсы: <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">Rates By Exchange Rate API</a>. Курс обновляется раз в сутки и носит справочный характер.</p>
+    </div>
+  </dialog>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       ОКНО «БЮДЖЕТ ПОЕЗДКИ» — отдельное от настроек, открывается со вкладки «Траты».
+       Сумма с собой, её валюта (может отличаться от основной валюты приложения)
+       и на сколько дней её растянуть → дневной лимит трат в этой валюте и в донгах.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <dialog id="budget-dialog" aria-labelledby="budget-title">
+    <div class="dialog-body">
+      <div class="dialog-head">
+        <h2 id="budget-title">Бюджет поездки</h2>
+        <button type="button" class="close-btn" id="budget-close" aria-label="Закрыть окно">×</button>
+      </div>
+      <p class="help">Сколько денег у вас с собой и на сколько дней — покажем, сколько можно тратить в день, чтобы хватило.</p>
+
+      <h3>Валюта суммы</h3>
+      <select id="budget-currency" class="text-input" aria-label="Валюта суммы с собой"></select>
+
+      <h3>Сумма с собой</h3>
+      <input id="budget-amount" class="big-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Например: 500">
+
+      <h3>На сколько дней растянуть</h3>
+      <input id="budget-days" class="text-input" type="number" inputmode="numeric" min="1" step="1" placeholder="Например: 10">
+
+      <div class="result" id="budget-result" aria-live="polite">
+        <p class="result-label">Можно тратить в день</p>
+        <p class="result-main" id="budget-main">—</p>
+        <p class="result-sub" id="budget-sub"></p>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

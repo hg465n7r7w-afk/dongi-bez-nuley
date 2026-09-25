@@ -1,0 +1,402 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   style.css — ВНЕШНИЙ ВИД «ДОНГИ БЕЗ НУЛЕЙ»
+
+   Правило CSS выглядит так:  селектор { свойство: значение; }
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg: #0a4d39;        /* тёмно-зелёный фон приложения */
+  --bg-soft: #0e6349;
+  --card: #ffffff;
+  --ink: #0f2a22;
+  --ink-soft: #5c7a70;
+  --line: rgba(15, 42, 34, 0.14);
+  --accent: #f4b400;    /* жёлтый акцент: главные кнопки, активная вкладка */
+  --accent-ink: #3a2900;
+  --danger: #b3261e;
+  --font: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Отступы под «чёлку» и системные полоски телефона. На компьютере они равны нулю. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;                 /* вместо 100vh: так высота верна и под «чёлкой» на телефоне */
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+}
+body { overscroll-behavior-y: contain; }     /* тянешь список вниз — не «провалишься» в обновление страницы браузера */
+body:has(dialog[open]) { overflow: hidden; } /* пока открыты настройки, фон не прокручивается */
+
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* .app — сама «карточка» приложения на весь экран телефона, с полем сверху под шапку и снизу под вкладки */
+.app {
+  min-height: 100%;
+  max-width: 480px;             /* на компьютере приложение не растягивается на весь экран, а остаётся «телефонной» ширины */
+  margin: 0 auto;
+  padding-top: var(--safe-top);
+  padding-bottom: calc(64px + var(--safe-bottom));   /* запас под нижнюю панель вкладок */
+  background: var(--bg);
+}
+
+/* ---------- ШАПКА ---------- */
+.app-header { padding: 18px 20px 14px; color: #fff; }
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.app-header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+.app-header h1 span { font-weight: 400; opacity: 0.85; }
+
+.pill-btn {
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.pill-btn:hover { background: rgba(255, 255, 255, 0.16); }
+
+.rate-line { margin: 10px 0 0; font-size: 0.95rem; opacity: 0.9; }
+
+.mode-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.mode-label { font-size: 0.95rem; opacity: 0.9; }
+
+/* .seg — переключатель из двух-трёх кнопок, где одна всегда «нажата» (aria-pressed="true") */
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+.seg button {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg-wide { display: flex; width: 100%; margin: 4px 0 20px; }
+.seg-wide button { flex: 1; }
+
+/* .seg внутри белой карточки (main) выглядит иначе: тот же .seg задуман для тёмной шапки
+   (полупрозрачный белый фон, белый текст), а на белом фоне это было бы невидимо — белым
+   по белому. Здесь переопределяем его на тёмный текст и тёмную полупрозрачную «капсулу». */
+main .seg { background: rgba(15, 42, 34, 0.08); }
+main .seg button { color: var(--ink); }
+main .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+
+/* ---------- ОСНОВНАЯ ОБЛАСТЬ: КАРТОЧКА С ВКЛАДКАМИ ---------- */
+main {
+  background: var(--card);
+  border-radius: 24px 24px 0 0;
+  padding: 22px 20px 32px;
+  min-height: calc(100vh - 150px);
+}
+
+.big-field { display: block; margin: 4px 0 8px; font-weight: 600; }
+.big-field span, .field-label { display: block; }
+
+/* Большое поле ввода суммы: крупный шрифт, ведь это главное действие на экране */
+.big-input {
+  width: 100%;
+  padding: 16px 18px;
+  border: 2px solid rgba(15, 42, 34, 0.35);
+  border-radius: 16px;
+  font-size: 1.6rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;   /* цифры одинаковой ширины: суммы не «дёргаются» при вводе */
+}
+.big-input:focus { outline: none; border-color: var(--bg-soft); box-shadow: 0 0 0 3px rgba(14, 99, 73, 0.22); }
+
+/* Подсказка под полем: как приложение распознало ввод («150k» → «150 000 ₫») */
+.parsed { min-height: 1.4em; margin: 8px 0 0; font-size: 0.95rem; color: var(--ink-soft); }
+.parsed.warn { color: var(--danger); font-weight: 600; }
+
+/* Кнопки быстрого выбора суммы/процента («50k», «100k», «10%», …) */
+.quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+.quick button {
+  padding: 9px 16px;
+  border: 2px solid rgba(15, 42, 34, 0.25);
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.quick button:hover { border-color: var(--bg-soft); }
+.quick button[aria-pressed="true"] { background: var(--bg); border-color: var(--bg); color: #fff; }
+
+/* Блок результата: крупная сумма в вашей валюте */
+.result { margin-top: 22px; padding: 20px; border-radius: 18px; background: #f2f7f4; }
+.result-label { margin: 0; font-size: 0.95rem; color: var(--ink-soft); }
+.result-main { margin: 6px 0 0; font-size: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.result-sub { margin: 4px 0 0; color: var(--ink-soft); }
+.result-others { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; color: var(--ink-soft); }
+.result-rate { margin: 12px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
+
+/* Шпаргалка по купюрам */
+.notes { margin-top: 30px; }
+.notes h2 { font-size: 1.1rem; margin: 0 0 12px; }
+.note-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.note-grid li {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--note-color, #eef2ee);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.note-grid .vnd { font-weight: 700; }
+.note-grid .conv { color: var(--ink-soft); font-size: 0.9rem; white-space: nowrap; }
+.note-tip { margin-top: 12px; font-size: 0.88rem; color: var(--ink-soft); }
+
+/* Список купюр в результате сдачи, каждая с количеством («500 000 ₫ × 1») */
+.chips-out { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.chips-out li { padding: 6px 12px; border-radius: 999px; background: #fff; border: 1px solid var(--line); font-weight: 600; font-size: 0.92rem; }
+
+/* Блок с шаговым счётчиком (число человек) */
+.field-block { margin-top: 22px; }
+
+/* Сводная строка бюджета поездки на вкладке «Траты»: текст слева, кнопка «Открыть» справа */
+.budget-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.budget-summary-row .result-sub { margin: 2px 0 0; }
+.stepper { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+.step-btn {
+  width: 46px;
+  height: 46px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bg);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.step-btn:hover:not(:disabled) { background: var(--bg); color: #fff; }
+.step-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.step-value { min-width: 34px; text-align: center; font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.check { display: flex; align-items: center; gap: 10px; margin-top: 22px; font-weight: 500; cursor: pointer; }
+.check input { width: 22px; height: 22px; accent-color: var(--bg); }   /* accent-color красит галочку в цвет приложения */
+
+/* ---------- СЧЁТ «ПО ПОЗИЦИЯМ»: карточки людей ---------- */
+#persons-list { display: grid; gap: 14px; margin-top: 16px; }
+
+.person-card { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #fbfdfb; }
+.person-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+
+.person-name {
+  flex: 1;
+  padding: 10px 12px;
+  border: 2px solid rgba(15, 42, 34, 0.25);
+  border-radius: 10px;
+  font-weight: 600;
+}
+.person-name:focus { outline: none; border-color: var(--bg-soft); box-shadow: 0 0 0 3px rgba(14, 99, 73, 0.2); }
+
+.remove-person-btn {
+  flex: none;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--danger);
+  font-weight: 600;
+  cursor: pointer;
+}
+.remove-person-btn:hover { background: rgba(179, 38, 30, 0.08); }
+.remove-person-btn[hidden] { display: none; }   /* когда человек всего один, кнопку «Убрать» прячем */
+
+/* Одна строка позиции: слева название (гибкое), справа цена фиксированной ширины и кнопка «×» */
+.item-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.item-line { display: grid; grid-template-columns: 1fr 96px auto; gap: 8px; align-items: center; }
+
+.item-name, .item-price {
+  padding: 9px 10px;
+  border: 2px solid rgba(15, 42, 34, 0.2);
+  border-radius: 10px;
+}
+.item-name:focus, .item-price:focus { outline: none; border-color: var(--bg-soft); }
+.item-price { text-align: right; font-variant-numeric: tabular-nums; }
+.item-price.invalid { border-color: var(--danger); }   /* когда цена введена, но не распознана */
+
+.item-remove {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: none;
+  border-radius: 50%;
+  background: #eef2ee;
+  color: var(--ink-soft);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.item-remove:hover { background: #e2ece5; color: var(--danger); }
+
+.btn-link {
+  margin-top: 8px;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--bg-soft);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.person-subtotal { margin: 10px 0 0; font-weight: 600; }
+.person-subtotal strong { font-variant-numeric: tabular-nums; }
+
+#add-person { margin-top: 4px; }
+
+
+/* ---------- НИЖНЯЯ ПАНЕЛЬ ВКЛАДОК ----------
+   position: fixed — панель приклеена к низу экрана и не двигается при прокрутке. */
+.tabbar {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);        /* центрируем панель под шириной .app, даже на широком экране */
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  padding-bottom: var(--safe-bottom);
+  z-index: 20;
+}
+.tabbar button {
+  flex: 1;
+  padding: 12px 4px calc(10px + var(--safe-bottom) * 0);
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font-weight: 600;
+  cursor: pointer;
+  border-top: 3px solid transparent;
+}
+.tabbar button[aria-selected="true"] { color: var(--bg); border-top-color: var(--bg); }
+
+
+/* ---------- ОКНО НАСТРОЕК (<dialog>) ---------- */
+dialog {
+  width: min(420px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  padding: 0;
+  border: none;
+  border-radius: 20px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+dialog::backdrop { background: rgba(10, 30, 24, 0.6); }
+.dialog-body { padding: 24px; overflow-y: auto; max-height: calc(100vh - 32px); }
+.dialog-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.dialog-head h2 { margin: 0; font-size: 1.3rem; }
+.close-btn {
+  width: 38px; height: 38px; flex: none;
+  border: none; border-radius: 50%;
+  background: #eef2ee; font-size: 1.5rem; line-height: 1; cursor: pointer;
+}
+.close-btn:hover { background: #dfe7e1; }
+
+.dialog-body h3 { margin: 22px 0 8px; font-size: 1rem; }
+.dialog-body h3:first-of-type { margin-top: 18px; }
+.help { margin: 0 0 10px; font-size: 0.9rem; color: var(--ink-soft); }
+.small-label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.92rem; }
+.text-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid rgba(15, 42, 34, 0.3);
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.text-input:focus { outline: none; border-color: var(--bg-soft); }
+
+.btn {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  border: 2px solid var(--bg);
+  background: var(--bg);
+  color: #fff;
+  cursor: pointer;
+}
+.btn-outline { background: transparent; color: var(--bg); }
+.btn-outline:hover { background: var(--bg); color: #fff; }
+
+.attrib { margin-top: 22px; font-size: 0.82rem; color: var(--ink-soft); }
+.attrib a { color: inherit; }
+
+
+/* ---------- ВЫПАДАЮЩИЙ СПИСОК ВАЛЮТ (в настройках) ----------
+   <select> — родной элемент браузера, у него своя стрелка и свой список при открытии,
+   мы только оформляем «рамку» под тот же стиль, что и .text-input. */
+select.text-input { cursor: pointer; background: #fff; }
+
+
+/* ---------- КНОПКА НА ВСЮ ШИРИНУ (вкладка «Траты») ---------- */
+.btn-block { display: block; width: 100%; margin-top: 6px; text-align: center; }
+
+
+/* ---------- ВКЛАДКА «ТРАТЫ» ---------- */
+.add-expense { display: grid; gap: 4px; }
+.add-expense .small-label { margin-top: 12px; }
+.add-expense .small-label:first-child { margin-top: 0; }
+
+/* Поля «свой период»: два поля дат в ряд */
+.custom-range { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; margin-top: 12px; }
+.custom-range .text-input { margin-bottom: 0; }
+
+.empty-note { margin: 24px 0 0; color: var(--ink-soft); text-align: center; }
+
+/* Список записей трат: дата и сумма слева, перевод в валюту посередине, кнопка удаления справа.
+   grid-template-columns: 1fr auto auto — первая колонка гибкая, две другие по размеру содержимого. */
+.expense-list { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 10px; }
+.expense-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfdfb;
+}
+.expense-info { display: flex; flex-direction: column; gap: 2px; }
+.expense-date { font-size: 0.88rem; color: var(--ink-soft); }
+.expense-amount { font-weight: 700; font-variant-numeric: tabular-nums; }
+.expense-converted { font-size: 0.9rem; color: var(--ink-soft); text-align: right; white-space: nowrap; }
+.expense-remove {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: none;
+  border-radius: 50%;
+  background: #eef2ee;
+  color: var(--ink-soft);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.expense-remove:hover { background: #e2ece5; color: var(--danger); }
+
+/* На узком экране переводу в валюту не хватает места в одной строке — переносим его вниз */
+@media (max-width: 380px) {
+  .expense-row { grid-template-columns: 1fr auto; }
+  .expense-converted { grid-column: 1 / -1; text-align: left; }
+}
+
+
+/* ---------- НА ЭКРАНЕ ПОШИРЕ (не телефон) ----------
+   Приложение всё равно остаётся «телефонной» карточкой по центру, но добавляем ей тень и скругление. */
+@media (min-width: 540px) {
+  body { display: flex; justify-content: center; background: #04241a; }
+  .app { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 30px 80px rgba(0, 0, 0, 0.4); }
+}
