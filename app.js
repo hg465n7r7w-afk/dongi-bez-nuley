@@ -388,7 +388,7 @@ function renderQuickAmounts() {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = convDirection === "toMain" ? formatVnd(amount) : amount.toLocaleString("ru-RU");
-    button.addEventListener("click", function () { convInput.value = String(amount); renderConverter(); });
+    button.addEventListener("click", function () { convInput.value = String(amount); syncClear(convInput); renderConverter(); });
     convQuick.appendChild(button);
   });
 }
@@ -472,7 +472,7 @@ function renderChangeQuick() {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = formatVnd(amount);
-    button.addEventListener("click", function () { chGiven.value = String(amount); renderChange(); });
+    button.addEventListener("click", function () { chGiven.value = String(amount); syncClear(chGiven); renderChange(); });
     chQuick.appendChild(button);
   });
 }
@@ -1077,6 +1077,7 @@ expAdd.addEventListener("click", function () {
   saveExpenses();
 
   expAmount.value = "";
+  syncClear(expAmount);
   expAmountNote.textContent = "";
   renderExpenses();
 });
@@ -1111,6 +1112,7 @@ function renderManualRateField() {
   const currency = currentCurrency();
   manualLabel.textContent = "Донгов за 1 " + currency.symbol;
   manualRateInput.value = state.settings.manualRate ? String(state.settings.manualRate) : "";
+  syncClear(manualRateInput);
 }
 
 manualRateInput.addEventListener("change", function () {
@@ -1192,6 +1194,70 @@ settingsDialog.addEventListener("click", function (event) {
   if (event.target === settingsDialog) settingsDialog.close();   // клик по затемнённому фону вокруг окна
 });
 
+/* ───── БАТЧ 1: МЕЛКИЕ УДОБСТВА ВВОДА ─────
+   1) Тактильный отклик на телефоне (короткая вибрация на действие).
+   2) Автовыделение текста в поле суммы при фокусе — не нужно стирать старое значение руками.
+   3) Кнопка «×» внутри поля для быстрой очистки.
+   Всё обёрнуто в проверки поддержки: если браузер/устройство не умеет — просто ничего не произойдёт,
+   остальная работа приложения не затронута. */
+
+// 1) Вибрация. iOS Safari эту возможность не поддерживает вообще (так устроен сам iPhone,
+// это не наша недоработка) — там vibrate() просто ничего не сделает, безопасно.
+function buzz() {
+  if (navigator.vibrate) {
+    try { navigator.vibrate(10); } catch (error) { /* не страшно, если не сработало */ }
+  }
+}
+
+// 2) Автовыделение текста в поле при фокусе — чтобы начать ввод «с нуля» одним тапом
+function selectOnFocus(el) {
+  el.addEventListener("focus", function () { el.select(); });
+}
+
+// 3) Кнопка очистки «×». Оборачиваем поле в контейнер и добавляем кнопку рядом —
+// без правки HTML для каждого поля по отдельности.
+function makeClearable(el) {
+  const wrap = document.createElement("div");
+  wrap.className = "clearable-wrap" + (el.classList.contains("text-input") ? " text-input-wrap" : "");
+  el.parentNode.insertBefore(wrap, el);
+  wrap.appendChild(el);
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "clear-btn";
+  btn.setAttribute("aria-label", "Очистить поле");
+  btn.textContent = "×";
+  wrap.appendChild(btn);
+
+  el._clearBtn = btn;   // сохраняем ссылку на кнопку прямо на поле — удобно обновлять видимость из других мест
+
+  function sync() { btn.classList.toggle("visible", el.value.length > 0); }
+  sync();
+  el.addEventListener("input", sync);
+
+  btn.addEventListener("click", function () {
+    el.value = "";
+    el.dispatchEvent(new Event("input", { bubbles: true }));   // чтобы сработал существующий пересчёт
+    el.focus();
+    sync();
+  });
+}
+
+// Обновить видимость кнопки «×», когда значение поля меняется программно (не вводом с клавиатуры)
+function syncClear(el) { if (el._clearBtn) el._clearBtn.classList.toggle("visible", el.value.length > 0); }
+
+[convInput, chPrice, chGiven, billTotal, expAmount, manualRateInput, compareAmount, budgetAmountInput].forEach(function (el) {
+  selectOnFocus(el);
+  makeClearable(el);
+});
+
+// Вибрация на основные нажатия: быстрые суммы, переключение вкладок, открытие окон
+document.querySelectorAll(".quick button, .seg button, .tabbar button").forEach(function (el) {
+  el.addEventListener("click", buzz);
+});
+openSettings.addEventListener("click", buzz);
+openBudget.addEventListener("click", buzz);
+
 openBudget.addEventListener("click", function () { budgetDialog.showModal(); });
 budgetClose.addEventListener("click", function () { budgetDialog.close(); });
 budgetDialog.addEventListener("click", function (event) {
@@ -1248,6 +1314,7 @@ renderExpensePeriodChips();
 state.budget = loadBudget();
 renderBudgetCurrencySelect();
 if (state.budget.amount) budgetAmountInput.value = String(state.budget.amount);
+syncClear(budgetAmountInput);
 if (state.budget.days) budgetDaysInput.value = String(state.budget.days);
 renderBudget();
 
