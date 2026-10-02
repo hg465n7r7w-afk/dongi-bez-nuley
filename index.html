@@ -54,16 +54,6 @@
 
       <!-- Строка с текущим курсом. Текст подставляет app.js. aria-live — озвучивается при изменении. -->
       <p class="rate-line" id="rate-line" aria-live="polite">Загружаю курс…</p>
-
-      <!-- Режим ввода. «В тысячах»: если набрать 150, приложение поймёт это как 150 000 ₫.
-           Удобно, ведь во Вьетнаме цены часто пишут как «150k». -->
-      <div class="mode-row">
-        <span class="mode-label" id="mode-label">Ввод донгов:</span>
-        <div class="seg" role="group" aria-labelledby="mode-label">
-          <button type="button" id="mode-plain" aria-pressed="true">Как есть</button>
-          <button type="button" id="mode-k" aria-pressed="false">В тысячах</button>
-        </div>
-      </div>
     </header>
 
     <main>
@@ -91,16 +81,20 @@
         <div class="result" id="conv-result" aria-live="polite">
           <p class="result-label" id="result-label">Это примерно</p>
           <p class="result-main" id="result-main">—</p>
-          <ul class="result-others" id="result-others"></ul>
+          <!-- Список в остальных валютах — не всегда нужен сразу, прячем за кнопку,
+               чтобы результат не терялся среди лишних цифр -->
+          <button type="button" class="link-btn" id="result-others-toggle" aria-expanded="false" aria-controls="result-others">Показать в других валютах</button>
+          <ul class="result-others" id="result-others" hidden></ul>
           <p class="result-rate" id="result-rate"></p>
         </div>
 
-        <!-- Шпаргалка по купюрам: сколько каждая стоит в вашей валюте -->
-        <div class="notes">
-          <h2>Шпаргалка: купюры</h2>
+        <!-- Шпаргалка по купюрам: справочная информация, нужна нечасто — поэтому свёрнута
+             по умолчанию (<details> — встроенный в браузер аккордеон, без своего JS). -->
+        <details class="notes">
+          <summary>Шпаргалка: купюры</summary>
           <ul class="note-grid" id="note-grid"></ul>
           <p class="note-tip"><strong>Осторожно:</strong> 20 000 и 500 000 ₫ обе синеватые, легко перепутать. Проверяйте количество нулей. Цвета на плитках приблизительные.</p>
-        </div>
+        </details>
       </section>
 
       <!-- ═══════════════ ВКЛАДКА 2: СДАЧА ═══════════════ -->
@@ -234,12 +228,27 @@
     </main>
 
     <!-- ─────────── НИЖНЯЯ ПАНЕЛЬ ВКЛАДОК ───────────
-         Три кнопки-вкладки, всегда внизу экрана (так удобно нажимать большим пальцем). -->
+         Четыре кнопки-вкладки, всегда внизу экрана (так удобно нажимать большим пальцем).
+         У каждой — свой значок (простой inline-SVG, без внешних файлов и библиотек —
+         ничего лишнего не грузится) и подпись под ним. У активной вкладки значок и подпись
+         перекрашиваются в акцентный цвет и появляется мягкая «таблетка»-подложка сзади. -->
     <nav class="tabbar" role="tablist" aria-label="Разделы приложения">
-      <button type="button" role="tab" id="tab-convert" aria-selected="true" aria-controls="panel-convert" data-tab="convert">Конвертер</button>
-      <button type="button" role="tab" id="tab-change" aria-selected="false" aria-controls="panel-change" data-tab="change">Сдача</button>
-      <button type="button" role="tab" id="tab-bill" aria-selected="false" aria-controls="panel-bill" data-tab="bill">Счёт</button>
-      <button type="button" role="tab" id="tab-expenses" aria-selected="false" aria-controls="panel-expenses" data-tab="expenses">Траты</button>
+      <button type="button" role="tab" id="tab-convert" aria-selected="true" aria-controls="panel-convert" data-tab="convert">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>
+        <span>Конвертер</span>
+      </button>
+      <button type="button" role="tab" id="tab-change" aria-selected="false" aria-controls="panel-change" data-tab="change">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Сдача</span>
+      </button>
+      <button type="button" role="tab" id="tab-bill" aria-selected="false" aria-controls="panel-bill" data-tab="bill">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h12v19l-3-2-3 2-3-2-3 2V2Z"/><path d="M9 8h6M9 12h6"/></svg>
+        <span>Счёт</span>
+      </button>
+      <button type="button" role="tab" id="tab-expenses" aria-selected="false" aria-controls="panel-expenses" data-tab="expenses">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V10M12 19V5M20 19v-7"/></svg>
+        <span>Траты</span>
+      </button>
     </nav>
   </div>
 
@@ -253,6 +262,18 @@
       <div class="dialog-head">
         <h2 id="settings-title">Настройки</h2>
         <button type="button" class="close-btn" id="settings-close" aria-label="Закрыть окно">×</button>
+      </div>
+
+      <!-- Режим ввода. «В тысячах»: если набрать 150, приложение поймёт это как 150 000 ₫.
+           Удобно, ведь во Вьетнаме цены часто пишут как «150k». Переехало сюда из шапки —
+           меняют это редко, незачем держать на виду на каждом открытии приложения. -->
+      <h3>Ввод донгов</h3>
+      <div class="mode-row">
+        <span class="mode-label" id="mode-label">Как вводить суммы в донгах</span>
+        <div class="seg" role="group" aria-labelledby="mode-label">
+          <button type="button" id="mode-plain" aria-pressed="true">Как есть</button>
+          <button type="button" id="mode-k" aria-pressed="false">В тысячах</button>
+        </div>
       </div>
 
       <h3>Ваша валюта</h3>

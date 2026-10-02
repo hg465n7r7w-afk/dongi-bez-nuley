@@ -42,7 +42,7 @@ button, input { font: inherit; color: inherit; }
   max-width: 480px;             /* на компьютере приложение не растягивается на весь экран, а остаётся «телефонной» ширины */
   margin: 0 auto;
   padding-top: var(--safe-top);
-  padding-bottom: calc(64px + var(--safe-bottom));   /* запас под нижнюю панель вкладок */
+  padding-bottom: calc(76px + var(--safe-bottom));   /* запас под нижнюю панель вкладок (значок + подпись выше старой панели) */
   background: var(--bg);
 }
 
@@ -84,9 +84,13 @@ button, input { font: inherit; color: inherit; }
 /* .seg внутри белой карточки (main) выглядит иначе: тот же .seg задуман для тёмной шапки
    (полупрозрачный белый фон, белый текст), а на белом фоне это было бы невидимо — белым
    по белому. Здесь переопределяем его на тёмный текст и тёмную полупрозрачную «капсулу». */
-main .seg { background: rgba(15, 42, 34, 0.08); }
-main .seg button { color: var(--ink); }
-main .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+/* То же самое нужно и внутри окон (<dialog>) — они вне <main>, фон у них тоже белый.
+   Переключатель «Ввод донгов» переехал в настройки (раньше жил в тёмной шапке) — без этой
+   строчки он был бы «белым по белому» и невидимым. */
+main .seg, .dialog-body .seg { background: rgba(15, 42, 34, 0.08); }
+main .seg button, .dialog-body .seg button { color: var(--ink); }
+main .seg button[aria-pressed="true"], .dialog-body .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.dialog-body .mode-label { opacity: 1; color: var(--ink); font-weight: 600; font-size: 0.92rem; }
 
 
 /* ---------- ОСНОВНАЯ ОБЛАСТЬ: КАРТОЧКА С ВКЛАДКАМИ ---------- */
@@ -173,7 +177,7 @@ main {
 .quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
 .quick button {
   padding: 9px 16px;
-  border: 2px solid rgba(15, 42, 34, 0.25);
+  border: 1px solid rgba(15, 42, 34, 0.16);
   border-radius: 999px;
   background: #fff;
   font-weight: 600;
@@ -188,11 +192,52 @@ main {
 .result-main { margin: 6px 0 0; font-size: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .result-sub { margin: 4px 0 0; color: var(--ink-soft); }
 .result-others { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; color: var(--ink-soft); }
+
+/* Кнопка-ссылка «Показать в других валютах»: без рамки и фона, не тянет на себя внимание,
+   но достаточно заметна, чтобы найти. Стрелочка разворачивается при открытии. */
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--bg-soft);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.link-btn::after { content: "▾"; font-size: 0.8rem; transition: transform 0.15s ease; }
+.link-btn[aria-expanded="true"]::after { transform: rotate(180deg); }
 .result-rate { margin: 12px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
 
 /* Шпаргалка по купюрам */
 .notes { margin-top: 30px; }
 .notes h2 { font-size: 1.1rem; margin: 0 0 12px; }
+
+/* Шпаргалка по купюрам — теперь <details>: по умолчанию свёрнута, не занимает экран зря.
+   summary оформляем как прежний h2, свою стрелочку браузера убираем и рисуем свою —
+   её удобно развернуть через transform при открытии ([open] summary). */
+.notes summary {
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;              /* убираем стандартный треугольник-маркер у summary */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+.notes summary::-webkit-details-marker { display: none; }   /* тот же треугольник в Safari/Chrome */
+.notes summary::after {
+  content: "▾";
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  transition: transform 0.15s ease;
+}
+.notes[open] summary::after { transform: rotate(180deg); }
+.notes .note-grid { margin-top: 14px; }
 .note-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .note-grid li {
   padding: 12px 14px;
@@ -309,7 +354,9 @@ main {
 
 
 /* ---------- НИЖНЯЯ ПАНЕЛЬ ВКЛАДОК ----------
-   position: fixed — панель приклеена к низу экрана и не двигается при прокрутке. */
+   position: fixed — панель приклеена к низу экрана и не двигается при прокрутке.
+   Современный вид: значок + подпись столбиком, у активной вкладки — мягкая «таблетка»
+   позади значка и акцентный цвет, вместо старой полоски сверху. */
 .tabbar {
   position: fixed;
   left: 50%;
@@ -318,22 +365,32 @@ main {
   width: 100%;
   max-width: 480px;
   display: flex;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);        /* лёгкое «стекло»: контент слегка просвечивает под панелью */
+  -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
-  padding-bottom: var(--safe-bottom);
+  padding: 6px 6px calc(6px + var(--safe-bottom));
+  gap: 2px;
   z-index: 20;
 }
 .tabbar button {
   flex: 1;
-  padding: 12px 4px calc(10px + var(--safe-bottom) * 0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 2px;
   border: none;
+  border-radius: 14px;
   background: none;
   color: var(--ink-soft);
   font-weight: 600;
+  font-size: 0.76rem;
   cursor: pointer;
-  border-top: 3px solid transparent;
 }
-.tabbar button[aria-selected="true"] { color: var(--bg); border-top-color: var(--bg); }
+.tab-icon { width: 22px; height: 22px; stroke-width: 2; transition: transform 0.15s ease; }
+.tabbar button[aria-selected="true"] { color: var(--bg); background: rgba(14, 99, 73, 0.1); }
+.tabbar button[aria-selected="true"] .tab-icon { transform: translateY(-1px) scale(1.06); }
 
 
 /* ---------- ОКНО НАСТРОЕК (<dialog>) ---------- */
@@ -365,7 +422,7 @@ dialog::backdrop { background: rgba(10, 30, 24, 0.6); }
 .text-input {
   width: 100%;
   padding: 12px 14px;
-  border: 2px solid rgba(15, 42, 34, 0.3);
+  border: 1px solid rgba(15, 42, 34, 0.2);
   border-radius: 12px;
   margin-bottom: 10px;
 }
