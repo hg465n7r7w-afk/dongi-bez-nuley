@@ -139,6 +139,32 @@ main {
 .clear-btn.visible { display: flex; }
 .clear-btn:hover { background: rgba(15, 42, 34, 0.2); }
 
+/* ───── ВИЗУАЛЬНЫЙ ОТКЛИК НА НАЖАТИЕ ─────
+   Замена вибрации там, где её нет (в первую очередь iPhone — там Vibration API не работает
+   в принципе, это ограничение iOS, не наше). Кнопка слегка «сжимается» при нажатии и
+   возвращается обратно — ощущается как отклик, работает одинаково на любом устройстве. */
+.quick button, .seg button, .tabbar button, .btn, .pill-btn, .close-btn {
+  transition: transform 0.12s ease;
+}
+.quick button:active, .seg button:active, .tabbar button:active, .btn:active, .pill-btn:active, .close-btn:active {
+  transform: scale(0.94);
+}
+/* .clear-btn уже использует transform для центрирования по вертикали (translateY(-50%)) —
+   добавляем сжатие поверх, а не вместо, иначе кнопка «спрыгнет» со своего места */
+.clear-btn { transition: transform 0.12s ease, background 0.15s ease; }
+.clear-btn:active { transform: translateY(-50%) scale(0.88); }
+
+/* Если у человека в системе включено «уменьшить анимацию» — уважаем это и убираем движение */
+@media (prefers-reduced-motion: reduce) {
+  .quick button, .seg button, .tabbar button, .btn, .pill-btn, .close-btn, .clear-btn {
+    transition: none;
+  }
+  .quick button:active, .seg button:active, .tabbar button:active, .btn:active, .pill-btn:active, .close-btn:active {
+    transform: none;
+  }
+  .clear-btn:active { transform: translateY(-50%); }
+}
+
 /* Подсказка под полем: как приложение распознало ввод («150k» → «150 000 ₫») */
 .parsed { min-height: 1.4em; margin: 8px 0 0; font-size: 0.95rem; color: var(--ink-soft); }
 .parsed.warn { color: var(--danger); font-weight: 600; }
