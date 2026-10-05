@@ -348,6 +348,13 @@ document.querySelector(".tabbar").addEventListener("click", function (event) {
       panels[key].classList.add("tab-enter");
     }
   });
+
+  // Если до переключения страница была прокручена вниз (например, долистали список трат),
+  // а на новой вкладке контента меньше — без этого человека «подбросит» вверх рывком.
+  // Прокручиваем сами, плавно, одновременно с анимацией появления. Уважаем системную
+  // настройку «уменьшить анимацию» — тогда прокручиваем сразу, без плавности.
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
 });
 
 
