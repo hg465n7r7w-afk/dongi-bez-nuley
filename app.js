@@ -328,16 +328,18 @@ const budgetSub = document.getElementById("budget-sub");
 
 
 /* ───── 7. ВКЛАДКИ ─────
-   Один обработчик на всю панель вкладок: смотрим, на какую кнопку нажали. */
+   switchTab() — вся логика переключения в одном месте: её вызывает и клик по нижней
+   панели, и свайп пальцем (см. ниже). Порядок вкладок для свайпа — TAB_ORDER. */
 
-document.querySelector(".tabbar").addEventListener("click", function (event) {
-  const button = event.target.closest("[data-tab]");
-  if (!button) return;
-  state.activeTab = button.dataset.tab;
+const TAB_ORDER = ["convert", "change", "bill", "expenses"];
 
-  tabs.forEach(function (tab) { tab.setAttribute("aria-selected", String(tab === button)); });
+function switchTab(tabKey) {
+  if (!panels[tabKey] || tabKey === state.activeTab) return;
+  state.activeTab = tabKey;
+
+  tabs.forEach(function (tab) { tab.setAttribute("aria-selected", String(tab.dataset.tab === tabKey)); });
   Object.keys(panels).forEach(function (key) {
-    const isActive = key === state.activeTab;
+    const isActive = key === tabKey;
     panels[key].hidden = !isActive;
     if (isActive) {
       // Перезапускаем CSS-анимацию появления: сначала убираем класс, затем принудительно
@@ -355,7 +357,54 @@ document.querySelector(".tabbar").addEventListener("click", function (event) {
   // настройку «уменьшить анимацию» — тогда прокручиваем сразу, без плавности.
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+}
+
+document.querySelector(".tabbar").addEventListener("click", function (event) {
+  const button = event.target.closest("[data-tab]");
+  if (!button) return;
+  switchTab(button.dataset.tab);
 });
+
+/* ───── СВАЙП МЕЖДУ ВКЛАДКАМИ ─────
+   Палец влево — следующая вкладка (по порядку TAB_ORDER), вправо — предыдущая.
+   Работает только пальцем (touch-события) — на компьютере свайпов нет, там и так
+   удобно кликать по нижней панели.
+   Важно: НЕ перехватываем жест, если он начался на поле ввода, кнопке, ссылке или
+   выпадающем списке — там горизонтальное движение пальца нужно для своих целей
+   (выделение текста, нажатие), забирать его нельзя. */
+const mainEl = document.querySelector("main");
+let swipeStartX = 0;
+let swipeStartY = 0;
+let swipeStartTime = 0;
+let swipeAllowed = false;
+
+mainEl.addEventListener("touchstart", function (event) {
+  if (event.touches.length !== 1) { swipeAllowed = false; return; }
+  swipeAllowed = !event.target.closest("input, textarea, select, button, a");
+  swipeStartX = event.touches[0].clientX;
+  swipeStartY = event.touches[0].clientY;
+  swipeStartTime = Date.now();
+}, { passive: true });
+
+mainEl.addEventListener("touchend", function (event) {
+  if (!swipeAllowed) return;
+  const touch = event.changedTouches[0];
+  const dx = touch.clientX - swipeStartX;
+  const dy = touch.clientY - swipeStartY;
+  const dt = Date.now() - swipeStartTime;
+
+  // Засчитываем как свайп, только если: движение заметное (>60px), в основном
+  // горизонтальное (не случайная прокрутка вверх-вниз) и не слишком медленное
+  const isHorizontalSwipe = Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600;
+  if (!isHorizontalSwipe) return;
+
+  const currentIndex = TAB_ORDER.indexOf(state.activeTab);
+  const nextIndex = dx < 0 ? currentIndex + 1 : currentIndex - 1;   // свайп влево → следующая вкладка
+  if (nextIndex >= 0 && nextIndex < TAB_ORDER.length) {
+    switchTab(TAB_ORDER[nextIndex]);
+    buzz();
+  }
+}, { passive: true });
 
 
 /* ───── 8. ШАПКА: РЕЖИМ ВВОДА И СТРОКА КУРСА ───── */
