@@ -380,7 +380,12 @@ let swipeAllowed = false;
 
 mainEl.addEventListener("touchstart", function (event) {
   if (event.touches.length !== 1) { swipeAllowed = false; return; }
-  swipeAllowed = !event.target.closest("input, textarea, select, button, a");
+  const startedOnControl = !!event.target.closest("input, textarea, select, button, a");
+  // Если в какое-то поле ввода сейчас набирают текст (открыта клавиатура) — свайп отключаем
+  // ВЕЗДЕ на экране, не только над самим полем. Иначе случайное движение пальца рядом
+  // с полем (потянулись к кнопке, случайно задели экран) переключает вкладку и сбивает ввод.
+  const fieldFocused = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  swipeAllowed = !startedOnControl && !fieldFocused;
   swipeStartX = event.touches[0].clientX;
   swipeStartY = event.touches[0].clientY;
   swipeStartTime = Date.now();
