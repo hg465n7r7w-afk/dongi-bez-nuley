@@ -82,6 +82,7 @@ const state = {
   settings: loadSettings(),
   rates: null,          // сколько донгов стоит одна единица каждой валюты, придёт из интернета
   ratesUpdated: null,   // когда курсы обновлялись (текст с сервера)
+  ratesLoading: true,   // true, пока самая первая загрузка курса ещё не завершилась (см. renderRateLine)
   activeTab: "convert",
   billMode: "equal",     // способ расчёта на вкладке «Счёт»: "equal" (поровну) или "items" (по позициям)
   billTip: 0,            // выбранный процент чаевых
@@ -227,6 +228,8 @@ async function loadRates(force) {
 /* ───── 6. НАХОДИМ ЭЛЕМЕНТЫ СТРАНИЦЫ ───── */
 
 const rateLine = document.getElementById("rate-line");
+const rateSkeleton = document.getElementById("rate-skeleton");
+const rateText = document.getElementById("rate-text");
 const modeLabel = document.getElementById("mode-label");
 const modePlain = document.getElementById("mode-plain");
 const modeK = document.getElementById("mode-k");
@@ -244,6 +247,7 @@ const convQuick = document.getElementById("conv-quick");
 const resultLabel = document.getElementById("result-label");
 const resultMain = document.getElementById("result-main");
 const resultOthers = document.getElementById("result-others");
+const resultOthersToggle = document.getElementById("result-others-toggle");
 const resultRate = document.getElementById("result-rate");
 const noteGrid = document.getElementById("note-grid");
 let convDirection = "toMain";   // "toMain": донги → ваша валюта; "toVnd": ваша валюта → донги
@@ -332,7 +336,18 @@ document.querySelector(".tabbar").addEventListener("click", function (event) {
   state.activeTab = button.dataset.tab;
 
   tabs.forEach(function (tab) { tab.setAttribute("aria-selected", String(tab === button)); });
-  Object.keys(panels).forEach(function (key) { panels[key].hidden = key !== state.activeTab; });
+  Object.keys(panels).forEach(function (key) {
+    const isActive = key === state.activeTab;
+    panels[key].hidden = !isActive;
+    if (isActive) {
+      // Перезапускаем CSS-анимацию появления: сначала убираем класс, затем принудительно
+      // «спрашиваем» браузер о размере элемента (offsetWidth) — это заставляет его применить
+      // снятие класса немедленно, и анимация при повторном добавлении запускается заново.
+      panels[key].classList.remove("tab-enter");
+      void panels[key].offsetWidth;
+      panels[key].classList.add("tab-enter");
+    }
+  });
 });
 
 
@@ -347,14 +362,21 @@ modePlain.addEventListener("click", function () { state.settings.inputMode = "pl
 modeK.addEventListener("click", function () { state.settings.inputMode = "k"; renderModeButtons(); saveSettings(); renderAll(); });
 
 function renderRateLine() {
+  // Пока курс ещё не загрузился в ПЕРВЫЙ раз — показываем «скелетон» вместо текста
+  // «Курс сейчас недоступен»: это неправда, курс просто ещё грузится, а не правда пропал.
+  const stillLoading = !state.rates && state.ratesLoading;
+  rateSkeleton.hidden = !stillLoading;
+  rateText.hidden = stillLoading;
+  if (stillLoading) { rateText.textContent = ""; return; }
+
   const currency = currentCurrency();
   const rate = dongPerUnit();
   if (!rate) {
-    rateLine.textContent = "Курс сейчас недоступен. Загляните в настройки.";
+    rateText.textContent = "Курс сейчас недоступен. Загляните в настройки.";
     return;
   }
   const source = state.settings.manualRate ? "ваш курс" : "рыночный курс";
-  rateLine.textContent = "1 " + currency.label.toLowerCase() + " ≈ " + formatVnd(rate) + " (" + source + ")";
+  rateText.textContent = "1 " + currency.label.toLowerCase() + " ≈ " + formatVnd(rate) + " (" + source + ")";
 }
 
 
@@ -1258,6 +1280,13 @@ document.querySelectorAll(".quick button, .seg button, .tabbar button").forEach(
 openSettings.addEventListener("click", buzz);
 openBudget.addEventListener("click", buzz);
 
+resultOthersToggle.addEventListener("click", function () {
+  const expanded = resultOthersToggle.getAttribute("aria-expanded") === "true";
+  resultOthersToggle.setAttribute("aria-expanded", String(!expanded));
+  resultOthersToggle.textContent = expanded ? "Показать в других валютах" : "Скрыть другие валюты";
+  resultOthers.hidden = expanded;
+});
+
 openBudget.addEventListener("click", function () { budgetDialog.showModal(); });
 budgetClose.addEventListener("click", function () { budgetDialog.close(); });
 budgetDialog.addEventListener("click", function (event) {
@@ -1321,6 +1350,7 @@ renderBudget();
 renderAll();
 
 loadRates(false).then(function (status) {
+  state.ratesLoading = false;
   if (status === "stale") ratesStatus.textContent = "Не удалось обновить курс, использую сохранённые данные.";
   renderAll();
 });

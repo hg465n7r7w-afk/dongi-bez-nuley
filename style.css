@@ -63,6 +63,26 @@ button, input { font: inherit; color: inherit; }
 
 .rate-line { margin: 10px 0 0; font-size: 0.95rem; opacity: 0.9; }
 
+/* Мерцающая плашка-заглушка (skeleton) на время первой загрузки курса — вместо пустоты
+   или пугающего «курс недоступен», пока он на самом деле просто ещё грузится. */
+.skeleton-bar {
+  display: inline-block;
+  width: 220px;
+  max-width: 70%;
+  height: 0.95rem;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.18) 25%, rgba(255,255,255,0.38) 50%, rgba(255,255,255,0.18) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar { animation: none; background: rgba(255, 255, 255, 0.25); }
+}
+
 .mode-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
 .mode-label { font-size: 0.95rem; opacity: 0.9; }
 
@@ -187,7 +207,13 @@ main {
 .quick button[aria-pressed="true"] { background: var(--bg); border-color: var(--bg); color: #fff; }
 
 /* Блок результата: крупная сумма в вашей валюте */
-.result { margin-top: 22px; padding: 20px; border-radius: 18px; background: #f2f7f4; }
+.result {
+  margin-top: 22px;
+  padding: 20px;
+  border-radius: 18px;
+  background: #f2f7f4;
+  box-shadow: 0 2px 10px rgba(15, 42, 34, 0.07), 0 1px 3px rgba(15, 42, 34, 0.05);
+}
 .result-label { margin: 0; font-size: 0.95rem; color: var(--ink-soft); }
 .result-main { margin: 6px 0 0; font-size: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .result-sub { margin: 4px 0 0; color: var(--ink-soft); }
@@ -214,6 +240,18 @@ main {
 
 /* Шпаргалка по купюрам */
 .notes { margin-top: 30px; }
+/* Плавное появление вкладки при переключении: лёгкий fade + сдвиг снизу вверх.
+   Класс .tab-enter добавляется и сразу снимается из app.js при каждом переключении —
+   так анимация запускается заново, а не только один раз при первой загрузке. */
+.panel.tab-enter { animation: tab-fade-in 0.2s ease; }
+@keyframes tab-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel.tab-enter { animation: none; }
+}
+
 .notes h2 { font-size: 1.1rem; margin: 0 0 12px; }
 
 /* Шпаргалка по купюрам — теперь <details>: по умолчанию свёрнута, не занимает экран зря.
@@ -260,7 +298,17 @@ main {
 .field-block { margin-top: 22px; }
 
 /* Сводная строка бюджета поездки на вкладке «Траты»: текст слева, кнопка «Открыть» справа */
-.budget-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.budget-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fbfdfb;
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 6px rgba(15, 42, 34, 0.05);
+}
 .budget-summary-row .result-sub { margin: 2px 0 0; }
 .stepper { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
 .step-btn {
@@ -284,7 +332,13 @@ main {
 /* ---------- СЧЁТ «ПО ПОЗИЦИЯМ»: карточки людей ---------- */
 #persons-list { display: grid; gap: 14px; margin-top: 16px; }
 
-.person-card { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #fbfdfb; }
+.person-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fbfdfb;
+  box-shadow: 0 1px 6px rgba(15, 42, 34, 0.05);
+}
 .person-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 
 .person-name {
@@ -478,6 +532,7 @@ select.text-input { cursor: pointer; background: #fff; }
   border: 1px solid var(--line);
   border-radius: 14px;
   background: #fbfdfb;
+  box-shadow: 0 1px 6px rgba(15, 42, 34, 0.05);
 }
 .expense-info { display: flex; flex-direction: column; gap: 2px; }
 .expense-date { font-size: 0.88rem; color: var(--ink-soft); }

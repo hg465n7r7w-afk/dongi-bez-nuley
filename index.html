@@ -53,7 +53,13 @@
       </div>
 
       <!-- Строка с текущим курсом. Текст подставляет app.js. aria-live — озвучивается при изменении. -->
-      <p class="rate-line" id="rate-line" aria-live="polite">Загружаю курс…</p>
+      <!-- Пока курс грузится — показываем мерцающую плашку-заглушку (skeleton) вместо текста,
+           так приложение ощущается быстрее. Как только курс известен — текст появляется,
+           заглушка прячется. См. renderRateLine() в app.js. -->
+      <p class="rate-line" id="rate-line" aria-live="polite">
+        <span class="skeleton-bar" id="rate-skeleton"></span>
+        <span id="rate-text"></span>
+      </p>
     </header>
 
     <main>
